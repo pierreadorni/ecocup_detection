@@ -1,0 +1,1 @@
+# ecocup_detection
