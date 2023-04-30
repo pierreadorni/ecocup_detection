@@ -3,7 +3,9 @@
 Ce script permet de generer la base d'images positive et négative pour le projet de détection d'Ecocups, apprendre un classifieur sur cette base d'apprentissage et utiliser ce classifieur sur de nouvelles données.  
 
 Le script peut être utilisé en exécutant la commande suivante depuis un terminal :  
-`python ecocup_detection.py [commande] [paramètres]`
+`python ecocup_detection.py [commande] [paramètres]`  
+
+Il faut que les images d'apprentissage positives soient stockées dans le dossier `.data/images/pos` afin d'être traité par le script pour générer le fichier labels.csv qui permet de réunir tous les fichiers de label dans un seul fichier.
 
 ## Commande "train"
 

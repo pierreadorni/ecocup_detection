@@ -9,7 +9,6 @@ Created on Sun Apr 30 11:02:07 2023
 import os
 import cv2
 import csv
-from matplotlib import pyplot as plt
 from typing import Tuple, Generator
 import numpy as np
 from skimage import io, util, transform, feature
