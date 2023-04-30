@@ -22,7 +22,6 @@ from datetime import datetime
 import uuid
 import sys
 
-
 # concatenate all csv files into one
 with open('data/labels.csv', 'w') as outfile:
     for file in os.listdir('data/labels_csv'):
@@ -30,6 +29,7 @@ with open('data/labels.csv', 'w') as outfile:
             # add filename to each line
             for line in infile:
                 outfile.write(file[:-4] + ',' + line)
+
 
 def get_ecocup_info(difficult: bool) -> Generator[Tuple[str, int, int, int, int], None, None]:
     with open("data/labels.csv") as file:
@@ -46,8 +46,10 @@ def get_ecocup_info(difficult: bool) -> Generator[Tuple[str, int, int, int, int]
                 yield img_name, x, y, w, h
             line = file.readline()
 
+
 def resize_image(source: np.ndarray, size: Tuple[int, int]) -> np.ndarray:
     return cv2.resize(source, size)
+
 
 def ecocup_image(image_file: str, x: int, y: int, w: int, h: int) -> np.ndarray:
     return io.imread('data/images/pos/' + image_file + '.jpg')[int(x):int(x) + int(w), int(y):int(y) + int(h)]
@@ -58,6 +60,7 @@ def get_pos_images(difficult=False) -> Generator[np.ndarray, None, None]:
     for info in get_ecocup_info(difficult):
         yield info, resize_image(ecocup_image(*info), (50, 100))
 
+
 def save_pos_images(save_dir: str = 'data/augmented_images', difficult: bool = False):
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -66,40 +69,44 @@ def save_pos_images(save_dir: str = 'data/augmented_images', difficult: bool = F
         filepath = os.path.join(save_dir, filename)
         io.imsave(filepath, util.img_as_ubyte(image))
 
-def augment_pos_images(num_images: int = 10, save_dir: str = 'data/augmented_images', difficult: bool = False):
-        save_pos_images(save_dir, difficult)
-        random.seed(datetime.now())
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        i = len(os.listdir(save_dir))
-        for info, image in get_pos_images(difficult):
-            for j in range(num_images):
-                # random flip
-                if random.uniform(0,1) < 0.5:
-                    image = cv2.flip(image, 1)
-                if random.uniform(0,1) < 0.9:
-                    augmented = image[
-                    random.randint(0, int(image.shape[0]/4)):
-                    random.randint(image.shape[0] - int(image.shape[0]/4), image.shape[0]),
-                    random.randint(0, int(image.shape[1]/4)):
-                    random.randint(image.shape[1] - int(image.shape[1]/4), image.shape[1])] # Slicing to crop the image
-                # random contrast factor between 0.75 and 1.25
-                contrast = random.uniform(0.85, 1.15)
-                # random brightness shift between -25 and 25
-                brightness = random.uniform(-20, 20)
-                # random gamma correction factor between 0.75 and 1.25
-                gamma = random.uniform(0.85, 1.15)
-                # apply color changes
-                augmented = cv2.convertScaleAbs(image, alpha=contrast, beta=brightness)
-                augmented = np.power(augmented / 255.0, gamma)
-                augmented = np.uint8(augmented * 255)
-                # save augmented image
-                filename = f"{i:04}.jpg"
-                filepath = os.path.join(save_dir, filename)
-                io.imsave(filepath, util.img_as_ubyte(augmented))
-                i += 1
 
-def generate_negative_images(num_images: int, save_dir: str = 'data/negative_images', source_dir: str = 'data/images/neg'):
+def augment_pos_images(num_images: int = 10, save_dir: str = 'data/augmented_images', difficult: bool = False):
+    save_pos_images(save_dir, difficult)
+    random.seed(datetime.now())
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    i = len(os.listdir(save_dir))
+    for info, image in get_pos_images(difficult):
+        for j in range(num_images):
+            # random flip
+            if random.uniform(0, 1) < 0.5:
+                image = cv2.flip(image, 1)
+            if random.uniform(0, 1) < 0.9:
+                augmented = image[
+                            random.randint(0, int(image.shape[0] / 4)):
+                            random.randint(image.shape[0] - int(image.shape[0] / 4), image.shape[0]),
+                            random.randint(0, int(image.shape[1] / 4)):
+                            random.randint(image.shape[1] - int(image.shape[1] / 4),
+                                           image.shape[1])]  # Slicing to crop the image
+            # random contrast factor between 0.75 and 1.25
+            contrast = random.uniform(0.85, 1.15)
+            # random brightness shift between -25 and 25
+            brightness = random.uniform(-20, 20)
+            # random gamma correction factor between 0.75 and 1.25
+            gamma = random.uniform(0.85, 1.15)
+            # apply color changes
+            augmented = cv2.convertScaleAbs(image, alpha=contrast, beta=brightness)
+            augmented = np.power(augmented / 255.0, gamma)
+            augmented = np.uint8(augmented * 255)
+            # save augmented image
+            filename = f"{i:04}.jpg"
+            filepath = os.path.join(save_dir, filename)
+            io.imsave(filepath, util.img_as_ubyte(augmented))
+            i += 1
+
+
+def generate_negative_images(num_images: int, save_dir: str = 'data/negative_images',
+                             source_dir: str = 'data/images/neg'):
     random.seed(datetime.now())
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -109,10 +116,10 @@ def generate_negative_images(num_images: int, save_dir: str = 'data/negative_ima
         source_file = random.choice(os.listdir(source_dir))
         source_image = io.imread(os.path.join(source_dir, source_file))
         # choose a random patch from the source image
-        rand = random.randint(50,150)
-        patch_size = (int(random.uniform(1.5, 2)*rand), rand)
-        patch_x = random.randint(0, max(0,source_image.shape[0] - patch_size[0]))
-        patch_y = random.randint(0, max(0,source_image.shape[1] - patch_size[1]))
+        rand = random.randint(50, 150)
+        patch_size = (int(random.uniform(1.5, 2) * rand), rand)
+        patch_x = random.randint(0, max(0, source_image.shape[0] - patch_size[0]))
+        patch_y = random.randint(0, max(0, source_image.shape[1] - patch_size[1]))
         patch = source_image[patch_x:patch_x + patch_size[0], patch_y:patch_y + patch_size[1]]
         patch = transform.resize(patch, (200, 100))
         # save negative image
@@ -121,7 +128,9 @@ def generate_negative_images(num_images: int, save_dir: str = 'data/negative_ima
         io.imsave(filepath, util.img_as_ubyte(patch))
         i += 1
 
-def train_svm_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/negative_images', model_dir = 'data/svm_model.joblib'):
+
+def train_svm_with_hog(pos_dir='data/augmented_images', neg_dir='data/negative_images',
+                       model_dir='data/svm_model.joblib'):
     # Load positive images
     print("loading pos img")
     pos_images = []
@@ -132,7 +141,8 @@ def train_svm_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/negati
             # resize the image to (100, 200)
             image = transform.resize(image, (100, 200))
             # compute HOG features for the image
-            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2), channel_axis=-1)
+            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2),
+                                       channel_axis=-1)
             pos_images.append(hog_features)
 
     # Load negative images
@@ -145,7 +155,8 @@ def train_svm_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/negati
             # resize the image to (100, 200)
             image = transform.resize(image, (100, 200))
             # compute HOG features for the image
-            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2), channel_axis=-1)
+            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2),
+                                       channel_axis=-1)
             neg_images.append(hog_features)
 
     # Combine positive and negative images into a single dataset
@@ -169,7 +180,8 @@ def train_svm_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/negati
 
     return clf
 
-def train_svm_poly(pos_dir = 'data/augmented_images', neg_dir = 'data/negative_images', model_dir = 'data/poly_model.joblib'):
+
+def train_svm_poly(pos_dir='data/augmented_images', neg_dir='data/negative_images', model_dir='data/poly_model.joblib'):
     # Load positive images
     pos_images = []
     for filename in os.listdir(pos_dir):
@@ -179,7 +191,8 @@ def train_svm_poly(pos_dir = 'data/augmented_images', neg_dir = 'data/negative_i
             # resize the image to (100, 200)
             image = transform.resize(image, (100, 200))
             # compute HOG features for the image
-            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2), channel_axis=-1)
+            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2),
+                                       channel_axis=-1)
             pos_images.append(hog_features)
 
     # Load negative images
@@ -191,7 +204,8 @@ def train_svm_poly(pos_dir = 'data/augmented_images', neg_dir = 'data/negative_i
             # resize the image to (100, 200)
             image = transform.resize(image, (100, 200))
             # compute HOG features for the image
-            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2), channel_axis=-1)
+            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2),
+                                       channel_axis=-1)
             neg_images.append(hog_features)
 
     # Combine positive and negative images into a single dataset
@@ -215,7 +229,9 @@ def train_svm_poly(pos_dir = 'data/augmented_images', neg_dir = 'data/negative_i
 
     return clf
 
-def train_rf_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/negative_images', model_dir = 'data/rf_model.joblib'):
+
+def train_rf_with_hog(pos_dir='data/augmented_images', neg_dir='data/negative_images',
+                      model_dir='data/rf_model.joblib'):
     # Load positive images
     print("loading pos img")
     pos_images = []
@@ -226,7 +242,8 @@ def train_rf_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/negativ
             # resize the image to (100, 200)
             image = transform.resize(image, (100, 200))
             # compute HOG features for the image
-            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2), channel_axis=-1)
+            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2),
+                                       channel_axis=-1)
             pos_images.append(hog_features)
 
     # Load negative images
@@ -239,7 +256,8 @@ def train_rf_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/negativ
             # resize the image to (100, 200)
             image = transform.resize(image, (100, 200))
             # compute HOG features for the image
-            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2), channel_axis=-1)
+            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2),
+                                       channel_axis=-1)
             neg_images.append(hog_features)
 
     # Combine positive and negative images into a single dataset
@@ -263,7 +281,9 @@ def train_rf_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/negativ
 
     return clf
 
-def train_adaboost_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/negative_images', model_dir = 'data/adaboost_model.joblib'):
+
+def train_adaboost_with_hog(pos_dir='data/augmented_images', neg_dir='data/negative_images',
+                            model_dir='data/adaboost_model.joblib'):
     # Load positive images
     print("loading pos img")
     pos_images = []
@@ -274,7 +294,8 @@ def train_adaboost_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/n
             # resize the image to (100, 200)
             image = transform.resize(image, (100, 200))
             # compute HOG features for the image
-            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2), channel_axis=-1)
+            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2),
+                                       channel_axis=-1)
             pos_images.append(hog_features)
 
     # Load negative images
@@ -287,7 +308,8 @@ def train_adaboost_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/n
             # resize the image to (100, 200)
             image = transform.resize(image, (100, 200))
             # compute HOG features for the image
-            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2), channel_axis=-1)
+            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2),
+                                       channel_axis=-1)
             neg_images.append(hog_features)
 
     # Combine positive and negative images into a single dataset
@@ -311,7 +333,9 @@ def train_adaboost_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/n
 
     return clf
 
-def train_gboost_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/negative_images', model_dir = 'data/gboost_model.joblib'):
+
+def train_gboost_with_hog(pos_dir='data/augmented_images', neg_dir='data/negative_images',
+                          model_dir='data/gboost_model.joblib'):
     # Load positive images
     print("Loading positive images...")
     pos_images = []
@@ -322,7 +346,8 @@ def train_gboost_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/neg
             # Resize the image to (100, 200)
             image = transform.resize(image, (100, 200))
             # Compute HOG features for the image
-            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2), channel_axis=-1)
+            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2),
+                                       channel_axis=-1)
             pos_images.append(hog_features)
 
     # Load negative images
@@ -335,7 +360,8 @@ def train_gboost_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/neg
             # Resize the image to (100, 200)
             image = transform.resize(image, (100, 200))
             # Compute HOG features for the image
-            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2), channel_axis=-1)
+            hog_features = feature.hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2),
+                                       channel_axis=-1)
             neg_images.append(hog_features)
 
     # Combine positive and negative images into a single dataset
@@ -359,6 +385,7 @@ def train_gboost_with_hog(pos_dir = 'data/augmented_images', neg_dir = 'data/neg
     joblib.dump(clf, model_dir)
 
     return clf
+
 
 def IoU(box1, box2):
     x1, y1, w1, h1 = box1
@@ -387,12 +414,13 @@ def IoU(box1, box2):
 
     return iou
 
+
 def get_box_from_labels(image_name, labels_file='data/labels.csv'):
     """Returns the list of bounding boxes for the given image_name in the labels_file."""
-    #print("file", image_name)
+    # print("file", image_name)
     with open(labels_file, 'r') as f:
         reader = csv.reader(f)
-        #next(reader)  # skip header row
+        # next(reader)  # skip header row
         boxes = []
         for row in reader:
             if row[0] == image_name:
@@ -400,160 +428,166 @@ def get_box_from_labels(image_name, labels_file='data/labels.csv'):
                 boxes.append((x, y, w, h))
         return boxes
 
-def test_model_sw(classifier, test_images_dir='data/test', save_dir='data/results', result_file='data/result.csv', debug=False):
-        clf = joblib.load(classifier)
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        with open(result_file, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter=',')
-            filenames = os.listdir(test_images_dir)
-            filenames.sort()
 
-            for n, filename in enumerate(filenames):
-                if not filename.endswith('.jpg'):
-                    continue
-                print(filename)
-                image_path = os.path.join(test_images_dir, filename)
-                image = cv2.imread(image_path)
-                img_height, img_width = image.shape[:2]
-                true_height, true_width = image.shape[:2]
+def test_model_sw(classifier, test_images_dir='data/test', save_dir='data/results', result_file='data/result.csv',
+                  debug=False):
+    clf = joblib.load(classifier)
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    with open(result_file, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        filenames = os.listdir(test_images_dir)
+        filenames.sort()
 
-                window_factor = 15
-                window_size = (int(min(img_width,img_height)/window_factor),int(2 * min(img_width,img_height)/window_factor))
-                window_size = (100, 200)
-                boxes_found = []
-                sizes = [70, 100]
-                ratios = [1.5, 1.75, 2]
+        for n, filename in enumerate(filenames):
+            if not filename.endswith('.jpg'):
+                continue
+            print(filename)
+            image_path = os.path.join(test_images_dir, filename)
+            image = cv2.imread(image_path)
+            img_height, img_width = image.shape[:2]
+            true_height, true_width = image.shape[:2]
 
-                for size in sizes:
-                    for ratio in ratios:
-                        window_size = (int(size), int(size * ratio))
-                        image = cv2.imread(image_path)
-                        for k in range(8):
-                            img_height, img_width = image.shape[:2]
-                            w, h = window_size
-                            for i in range(0, img_height - window_size[1], int(window_size[1]/3)):
-                                for j in range(0, img_width - window_size[0], int(window_size[0]/3)):
-                                    x, y = j, i
-                                    proposal_img = image[y:y+h,x:x+w]
-                                    if proposal_img.shape != (h, w, 3):
-                                        break
-                                    # resize the image to (100, 200)
-                                    proposal_img = cv2.resize(proposal_img, (100, 200))
-                                    # encode the image as HOG features
-                                    hog_features = feature.hog(proposal_img, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2), channel_axis=-1)
-                                    # make a prediction using the SVM
-                                    proba = clf.predict_proba(hog_features.reshape(1, -1))
-                                    if proba[0][1] > 0.55:
-                                        scale_x = true_width / img_width
-                                        scale_y = true_height / img_height
-                                        true_x = int(x * scale_x)
-                                        true_y = int(y * scale_y)
-                                        true_w = int(w * scale_x)
-                                        true_h = int(h * scale_y)
-                                        box = (true_x, true_y, true_w, true_h)
-                                        boxes_found.append([box, proba[0][1]])
+            window_factor = 15
+            window_size = (
+            int(min(img_width, img_height) / window_factor), int(2 * min(img_width, img_height) / window_factor))
+            window_size = (100, 200)
+            boxes_found = []
+            sizes = [70, 100]
+            ratios = [1.5, 1.75, 2]
 
-                            image = cv2.resize(image, (int(img_width*0.85), int(img_height*0.8)))
-                image = cv2.imread(image_path)
-                # sort boxes by probability
-                boxes_found = sorted(boxes_found, key=lambda x: x[1], reverse=True)
+            for size in sizes:
+                for ratio in ratios:
+                    window_size = (int(size), int(size * ratio))
+                    image = cv2.imread(image_path)
+                    for k in range(8):
+                        img_height, img_width = image.shape[:2]
+                        w, h = window_size
+                        for i in range(0, img_height - window_size[1], int(window_size[1] / 3)):
+                            for j in range(0, img_width - window_size[0], int(window_size[0] / 3)):
+                                x, y = j, i
+                                proposal_img = image[y:y + h, x:x + w]
+                                if proposal_img.shape != (h, w, 3):
+                                    break
+                                # resize the image to (100, 200)
+                                proposal_img = cv2.resize(proposal_img, (100, 200))
+                                # encode the image as HOG features
+                                hog_features = feature.hog(proposal_img, orientations=9, pixels_per_cell=(8, 8),
+                                                           cells_per_block=(2, 2), channel_axis=-1)
+                                # make a prediction using the SVM
+                                proba = clf.predict_proba(hog_features.reshape(1, -1))
+                                if proba[0][1] > 0.55:
+                                    scale_x = true_width / img_width
+                                    scale_y = true_height / img_height
+                                    true_x = int(x * scale_x)
+                                    true_y = int(y * scale_y)
+                                    true_w = int(w * scale_x)
+                                    true_h = int(h * scale_y)
+                                    box = (true_x, true_y, true_w, true_h)
+                                    boxes_found.append([box, proba[0][1]])
 
-                # loop through boxes and remove those with high IoU
-                boxes_to_remove = []
-                for i in range(len(boxes_found)):
-                    for j in range(i+1, len(boxes_found)):
-                        iou = IoU(boxes_found[i][0], boxes_found[j][0])
-                        if iou > 0.4:
-                            boxes_to_remove.append(j)
-                boxes_to_remove = list(set(boxes_to_remove))
-                boxes_found = [box for i, box in enumerate(boxes_found) if i not in boxes_to_remove]
+                        image = cv2.resize(image, (int(img_width * 0.85), int(img_height * 0.8)))
+            image = cv2.imread(image_path)
+            # sort boxes by probability
+            boxes_found = sorted(boxes_found, key=lambda x: x[1], reverse=True)
 
-                # loop through remaining boxes and test against labels
-                if debug:
-                    name, ext = os.path.splitext(filename)
-                    labels = get_box_from_labels(name)
-                    for box in boxes_found:
-                        has_label = False
-                        for label in labels:
-                            iou = IoU(box[0], label)
-                            if iou >= 0.3:
-                                has_label = True
-                                break
-                        if not has_label:
-                            #if random.uniform(0,1) < 0.5:
-                            # Add image to negative training dataset
-                            negative_img = image[box[0][1]:box[0][1]+box[0][3], box[0][0]:box[0][0]+box[0][2]]
-                            negative_img = cv2.resize(negative_img, (100, 200))
-                            cv2.imwrite(os.path.join('data/negative_images', f"false_positive_{str(uuid.uuid4())[:8]}.jpg"), negative_img)
-                        else:
-                            pos_img = image[box[0][1]:box[0][1]+box[0][3], box[0][0]:box[0][0]+box[0][2]]
-                            pos_img = cv2.resize(pos_img, (100, 200))
-                            cv2.imwrite(os.path.join('data/augmented_images', f"pos_{str(uuid.uuid4())[:8]}.jpg"), pos_img)
+            # loop through boxes and remove those with high IoU
+            boxes_to_remove = []
+            for i in range(len(boxes_found)):
+                for j in range(i + 1, len(boxes_found)):
+                    iou = IoU(boxes_found[i][0], boxes_found[j][0])
+                    if iou > 0.4:
+                        boxes_to_remove.append(j)
+            boxes_to_remove = list(set(boxes_to_remove))
+            boxes_found = [box for i, box in enumerate(boxes_found) if i not in boxes_to_remove]
 
-
-                # write the non-overlapping boxes to the CSV file
+            # loop through remaining boxes and test against labels
+            if debug:
+                name, ext = os.path.splitext(filename)
+                labels = get_box_from_labels(name)
                 for box in boxes_found:
-                    x, y, w, h = box[0]
-                    score = box[1]
-                    writer.writerow([n, y, x, h, w, score])
-                # draw the non-overlapping boxes on the image
-                for box in boxes_found:
-                    x, y, w, h = box[0]
-                    score = box[1]
-                    cv2.rectangle(image, (x, y), (x+w, y+h), (0, int((score-0.55) * 255*45), 0), 2)
-                # save the image with boxes drawn on it
-                save_path = os.path.join(save_dir, filename)
-                cv2.imwrite(save_path, image)
+                    has_label = False
+                    for label in labels:
+                        iou = IoU(box[0], label)
+                        if iou >= 0.3:
+                            has_label = True
+                            break
+                    if not has_label:
+                        # if random.uniform(0,1) < 0.5:
+                        # Add image to negative training dataset
+                        negative_img = image[box[0][1]:box[0][1] + box[0][3], box[0][0]:box[0][0] + box[0][2]]
+                        negative_img = cv2.resize(negative_img, (100, 200))
+                        cv2.imwrite(os.path.join('data/negative_images', f"false_positive_{str(uuid.uuid4())[:8]}.jpg"),
+                                    negative_img)
+                    else:
+                        pos_img = image[box[0][1]:box[0][1] + box[0][3], box[0][0]:box[0][0] + box[0][2]]
+                        pos_img = cv2.resize(pos_img, (100, 200))
+                        cv2.imwrite(os.path.join('data/augmented_images', f"pos_{str(uuid.uuid4())[:8]}.jpg"), pos_img)
+
+            # write the non-overlapping boxes to the CSV file
+            for box in boxes_found:
+                x, y, w, h = box[0]
+                score = box[1]
+                writer.writerow([n, y, x, h, w, score])
+            # draw the non-overlapping boxes on the image
+            for box in boxes_found:
+                x, y, w, h = box[0]
+                score = box[1]
+                cv2.rectangle(image, (x, y), (x + w, y + h), (0, int((score - 0.55) * 255 * 45), 0), 2)
+            # save the image with boxes drawn on it
+            save_path = os.path.join(save_dir, filename)
+            cv2.imwrite(save_path, image)
 
 
 if len(sys.argv) < 4:
-    print('Utilisation: python ecocup_detection.py train <svm/poly/rf/gboost/adaboost> <positive_data_dir> <negative_data_dir> <model_file')
+    print(
+        'Utilisation: python ecocup_detection.py train <svm/poly/rf/gboost/adaboost> <positive_data_dir> <negative_data_dir> <model_file')
     print('             python ecocup_detection.py test <classifier.joblib> <test_data_dir> <output_dir> <results.csv>')
     print('             python ecocup_detection.py generate <pos> <num_images> <save_dir>')
     print('             python ecocup_detection.py generate <neg> <num_images> <save_dir> <source_dir>')
     sys.exit()
 
 if sys.argv[1] == 'train':
-        if sys.argv[2] == 'svm':
-            clf = train_svm_with_hog(sys.argv[3], sys.argv[4], sys.argv[5])
-            print('Le modèle à été sauvegardé sous', sys.argv[5])
-        elif sys.argv[2] == 'poly':
-            clf = train_svm_poly(sys.argv[3], sys.argv[4], sys.argv[5])
-            print('Le modèle à été sauvegardé sous', sys.argv[5])
-        elif sys.argv[2] == 'rf':
-            clf = train_rf_with_hog(sys.argv[3], sys.argv[4], sys.argv[5])
-            print('Le modèle à été sauvegardé sous', sys.argv[5])
-        elif sys.argv[2] == 'gboost':
-            clf = train_gboost_with_hog(sys.argv[3], sys.argv[4, sys.argv[5]])
-            print('Le modèle à été sauvegardé sous', sys.argv[5])
-        elif sys.argv[2] == 'adaboost':
-            clf = train_gboost_with_hog(sys.argv[3], sys.argv[4, sys.argv[5]])
-            print('Le modèle à été sauvegardé sous', sys.argv[5])
-        else:
-            print('Commande invalide. Utilisez "svm", "poly", "rf", "gboost" ou "adaboost".')
-            sys.exit()
+    if sys.argv[2] == 'svm':
+        clf = train_svm_with_hog(sys.argv[3], sys.argv[4], sys.argv[5])
+        print('Le modèle à été sauvegardé sous', sys.argv[5])
+    elif sys.argv[2] == 'poly':
+        clf = train_svm_poly(sys.argv[3], sys.argv[4], sys.argv[5])
+        print('Le modèle à été sauvegardé sous', sys.argv[5])
+    elif sys.argv[2] == 'rf':
+        clf = train_rf_with_hog(sys.argv[3], sys.argv[4], sys.argv[5])
+        print('Le modèle à été sauvegardé sous', sys.argv[5])
+    elif sys.argv[2] == 'gboost':
+        clf = train_gboost_with_hog(sys.argv[3], sys.argv[4, sys.argv[5]])
+        print('Le modèle à été sauvegardé sous', sys.argv[5])
+    elif sys.argv[2] == 'adaboost':
+        clf = train_gboost_with_hog(sys.argv[3], sys.argv[4, sys.argv[5]])
+        print('Le modèle à été sauvegardé sous', sys.argv[5])
+    else:
+        print('Commande invalide. Utilisez "svm", "poly", "rf", "gboost" ou "adaboost".')
+        sys.exit()
 
 elif sys.argv[1] == 'test':
-        if len(sys.argv) != 6:
-            print('Utilisation: python ecocup_detection.py test <classifier.joblib> <test_data_dir> <output_dir> <results.csv>')
-            sys.exit()
+    if len(sys.argv) != 6:
+        print(
+            'Utilisation: python ecocup_detection.py test <classifier.joblib> <test_data_dir> <output_dir> <results.csv>')
+        sys.exit()
 
-        clf = sys.argv[2]
-        test_dir = sys.argv[3]
-        output_dir = sys.argv[4]
-        output_file = sys.argv[5]
-        test_model_sw(clf, test_dir, output_dir, output_file)
-        print(f'Les prédictions ont été sauvegardé sous {output_file}')
+    clf = sys.argv[2]
+    test_dir = sys.argv[3]
+    output_dir = sys.argv[4]
+    output_file = sys.argv[5]
+    test_model_sw(clf, test_dir, output_dir, output_file)
+    print(f'Les prédictions ont été sauvegardé sous {output_file}')
 
 elif sys.argv[1] == 'generate':
-        if sys.argv[2] == 'pos':
-                print('Utilisation: python ecocup_detection.py generate pos <num_images> <save_dir>')
-                augment_pos_images(int(sys.argv[3]), sys.argv[4])
-        if sys.argv[2] == 'neg':
-                print('Utilisation: python ecocup_detection.py generate <neg> <num_images> <save_dir> <source_dir>')
-                generate_negative_images(int(sys.argv[3]), sys.argv[4], sys.argv[5])
+    if sys.argv[2] == 'pos':
+        print('Utilisation: python ecocup_detection.py generate pos <num_images> <save_dir>')
+        augment_pos_images(int(sys.argv[3]), sys.argv[4])
+    if sys.argv[2] == 'neg':
+        print('Utilisation: python ecocup_detection.py generate <neg> <num_images> <save_dir> <source_dir>')
+        generate_negative_images(int(sys.argv[3]), sys.argv[4], sys.argv[5])
 
 else:
-        print('Commande invalide. Utilisez "train", "test" or "generate".')
-        sys.exit()
+    print('Commande invalide. Utilisez "train", "test" or "generate".')
+    sys.exit()
